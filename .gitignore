@@ -2,3 +2,5 @@
 .SDK
 ._build
 .vscode
+SDK/
+_build/

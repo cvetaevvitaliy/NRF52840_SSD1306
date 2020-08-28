@@ -69,9 +69,12 @@ int main(void)
     ssd1306_Init();
     ssd1306_FlipScreenVertically();
     ssd1306_Clear();
-    ssd1306_Draw_String("For Kaa IoT ",0, 0, &Font_8x10);
-    ssd1306_Draw_String("NRF52840",0, 11, &Font_8x10);
+    ssd1306_Draw_String("I want to work",0, 0, &Font_8x10);
+    ssd1306_Draw_String("in KaaIoT",0, 11, &Font_8x10);
+    ssd1306_Draw_String("NRF52840",0, 23, &Font_8x10);
     ssd1306_UpdateScreen();
+    nrf_delay_ms(1000); 
+    ssd1306_Start_Scroll_Right(0, 2);
     while (true)
     {
         BlinkLED();

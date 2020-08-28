@@ -1,12 +1,9 @@
 #include "ssd1306.h"
-#include "nrf_drv_twi.h"
 #include "nrf_delay.h"
 
 #define TWI_INSTANCE_ID     0
 
-const nrf_drv_twi_t oled_twi_master = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID);
-
-static SSD1306_t SSD1306;
+static SSD1306_t SSD1306 = { .oled_twi_master = NRF_DRV_TWI_INSTANCE(TWI_INSTANCE_ID), };
 
 static uint8_t SSD1306_Buffer[SSD1306_BUFFER_SIZE];
 
@@ -45,12 +42,8 @@ void ssd1306_SetColor(SSD1306_COLOR color)
 
 //	Initialize the oled screen
 bool ssd1306_Init(void) {
-    /* Check if LCD connected to I2C */
-    // if (HAL_I2C_IsDeviceReady(&SSD1306_I2C_PORT, SSD1306_I2C_ADDR, 5, 1000) != HAL_OK)
-    //     return false;
 
     // Wait for the screen to boot
-    //HAL_Delay(300);
     nrf_delay_ms(300);
 
     /* Init LCD */
@@ -114,7 +107,7 @@ void ssd1306_Fill() {
     /* Set memory */
     uint16_t i;
 
-    for (i = 1; i < sizeof(SSD1306_Buffer); i++) {
+    for (i = 0; i < sizeof(SSD1306_Buffer); i++) {
         SSD1306_Buffer[i] = (SSD1306.Color == Black) ? 0x00 : 0xFF;
     }
 }
@@ -124,12 +117,11 @@ void ssd1306_Fill() {
 //
 void ssd1306_UpdateScreen(void) {
 
-    SSD1306_Buffer[0] = 0x40;
     for (uint8_t i = 0; i < 8; i++) {
         ssd1306_WriteCommand(0xB0 + i);
         ssd1306_WriteCommand(SETLOWCOLUMN);
         ssd1306_WriteCommand(SETHIGHCOLUMN);
-        ssd1306_WriteData(&SSD1306_Buffer[SSD1306_WIDTH * (i) ], width());
+        ssd1306_WriteData(&SSD1306_Buffer[(SSD1306_WIDTH * (i))], width());
     }
 
 
@@ -156,9 +148,9 @@ void ssd1306_DrawPixel(uint8_t x, uint8_t y) {
 
     // Draw in the right color
     if (color == White) {
-        SSD1306_Buffer[x + (y / 8) * width() + 1] |= 1 << (y % 8);
+        SSD1306_Buffer[x + (y / 8) * width()] |= 1 << (y % 8);
     } else {
-        SSD1306_Buffer[x + (y / 8) * width() + 1] &= ~(1 << (y % 8));
+        SSD1306_Buffer[x + (y / 8) * width()] &= ~(1 << (y % 8));
     }
 }
 
@@ -798,12 +790,15 @@ void ssd1306_Clear() {
 static void ssd1306_WriteCommand(uint8_t command) {
 
     uint8_t buf[2] = {0x00, command};
-    nrf_drv_twi_tx(&oled_twi_master, SSD1306_I2C_ADDR, buf, 2, false);
+    nrf_drv_twi_tx(&SSD1306.oled_twi_master, SSD1306_I2C_ADDR, buf, 2, false);
 }
 
 static void ssd1306_WriteData(uint8_t* data, uint16_t size) {
 
-    nrf_drv_twi_tx(&oled_twi_master, SSD1306_I2C_ADDR, data, size, false);
+    uint8_t buf[size + 1];
+    buf[0] = 0x40;
+    memcpy(buf + 1, data, size);
+    nrf_drv_twi_tx(&SSD1306.oled_twi_master, SSD1306_I2C_ADDR, buf, size+1, false);
     
 }
 
@@ -885,8 +880,8 @@ void i2c_init (void)
        .clear_bus_init     = false
     };
 
-    err_code = nrf_drv_twi_init(&oled_twi_master, &twi_config, NULL, NULL);
+    err_code = nrf_drv_twi_init(&SSD1306.oled_twi_master, &twi_config, NULL, NULL);
     APP_ERROR_CHECK(err_code);
 
-    nrf_drv_twi_enable(&oled_twi_master);
+    nrf_drv_twi_enable(&SSD1306.oled_twi_master);
 }
